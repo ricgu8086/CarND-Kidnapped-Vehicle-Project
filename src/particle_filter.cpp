@@ -26,6 +26,31 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 
+	num_particles = 50; // TODO parameter to be tuned after some testing
+
+	double std_x = std[0];
+	double std_y = std[1];
+	double std_theta = std[2];
+	
+	default_random_engine generator;
+
+	normal_distribution<double> dist_x(x, std_x);
+	normal_distribution<double> dist_y(y, std_y);
+	normal_distribution<double> dist_theta(theta, std_theta);
+
+	struct particle aux;
+
+	for(int i=0; i<num_particles; i++)
+	{
+		particle.x = dist_x(generator);
+		particle.y = dist_y(generator);
+		particle.theta = dist_theta(generator);
+		particle.weight = 1;
+
+		particles.push_back(particle); // It's added by copy, not by reference. It is OK
+	}
+	
+	weights.resize(num_particles, 1);
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) 
@@ -67,6 +92,21 @@ void ParticleFilter::resample()
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
+	mt19937 generator;
+    // std::default_random_engine generator; // The previous one was recommended in Udacity code, but I added this one here as a reference (easier to remember)
+    discrete_distribution<int> distribution(weights);
+
+	vector<double> weights2;
+
+	int index;
+
+	for(int i=0; i<weights.size(); i++)
+	{
+		index = distribution(generator);
+		weights2.push_back(weights[index]);
+	}
+
+	weights = weights2;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
