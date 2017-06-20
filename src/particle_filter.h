@@ -11,8 +11,8 @@
 
 #include "helper_functions.h"
 
-struct Particle {
-
+struct Particle 
+{
 	int id;
 	double x;
 	double y;
@@ -25,13 +25,11 @@ struct Particle {
 
 
 
-class ParticleFilter {
-	
+class ParticleFilter 
+{	
 	// Number of particles to draw
 	int num_particles; 
-	
-	
-	
+
 	// Flag, if filter is initialized
 	bool is_initialized;
 	
@@ -111,7 +109,8 @@ public:
 	/**
 	 * initialized Returns whether particle filter is initialized yet or not.
 	 */
-	const bool initialized() const {
+	const bool initialized() const 
+	{
 		return is_initialized;
 	}
 };
