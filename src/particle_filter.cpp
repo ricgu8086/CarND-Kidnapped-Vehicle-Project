@@ -44,7 +44,7 @@ inline double normpdfbi(double x, double mu_x, double std_x, \
 vector<double> normalize_vector(vector<double> inputVector);
 
 
-void ParticleFilter::init(double x, double y, double theta, double std[]) 
+	void ParticleFilter::init(double x, double y, double theta, double std[]) 
 {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
@@ -71,11 +71,14 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 		particle_aux.y = dist_y(generator);
 		particle_aux.theta = dist_theta(generator);
 		particle_aux.weight = 1;
+		particle_aux.id = i;
 
 		particles.push_back(particle_aux); // It's added by copy, not by reference. It is OK
 	}
 	
 	weights.resize(num_particles, 1);
+
+	is_initialized = true;	
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) 
@@ -161,9 +164,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 	weights.clear();
 
-	// std_landmark: [standard deviation of range [m], standard deviation of bearing [rad]]
-	std_x = std_landmark[0]*cos(std_landmark[1]);
-	std_y = std_landmark[0]*sin(std_landmark[1]);
+	// Update: the description of std_landmark is wrong. Reported issue https://github.com/udacity/CarND-Kidnapped-Vehicle-Project/issues/8
+	// CORRECT: std_landmark: [x [m], y [m]]
+	// WRONG: std_landmark: [standard deviation of range [m], standard deviation of bearing [rad]]
+	std_x = std_landmark[0];
+	std_y = std_landmark[1];
 
 	for (auto&& p: particles)
 	{
