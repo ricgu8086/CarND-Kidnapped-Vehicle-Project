@@ -19,6 +19,31 @@
 
 using namespace std;
 
+
+/* Prototypes (should be in a .h but the autograder doesn't allow it) */
+/* 
+ *
+ */
+inline double squared(double x);
+
+/*****************************************************************************
+ * normpdf(X,mu,sigma) computes the probability function at values x using the
+ * normal distribution with mean mu and standard deviation std. x, mue and 
+ * sigma must be scalar! The parameter std must be positive. 
+ * The normal pdf is y=f(x;mu,std)= 1/(std*sqrt(2pi)) e[ -(x−mu)^2 / 2*std^2 ]
+ *****************************************************************************/
+inline double normpdf(double x, double mu, double std);
+
+inline double normpdfbi(double x, double mu_x, double std_x, \
+									double y, double mu_y, double std_y);
+
+
+/*
+ *
+ */
+vector<double> normalize_vector(vector<double> inputVector);
+
+
 void ParticleFilter::init(double x, double y, double theta, double std[]) 
 {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
@@ -102,6 +127,21 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
+	double dist_min;
+
+	for (auto&& obs: observations)
+	{
+		dist_min = numeric_limits<double>::max();
+
+		for (auto land: predicted)
+		{
+			if(dist(obs.x, obs.y, land.x, land.y) < dist_min)
+				obs.id = land.id;
+		}
+	}
+
+
+	double dist(double x1, double y1, double x2, double y2)
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -117,6 +157,66 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	double mu_x, mu_y, std_x, std_y;
+	vector<LandmarkObs> transformed_obs;
+	struct LandmarkObs aux;
+
+	weights.clear();
+
+	// std_landmark: [standard deviation of range [m], standard deviation of bearing [rad]]
+	std_x = std_landmark[0]*cos(std_landmark[1]);
+	std_y = std_landmark[0]*sin(std_landmark[1]);
+
+	for (auto&& p: particles)
+	{
+		// Transform all observations from vehicle's coordinates to map's coordinates
+		for (auto&& obs: observations)
+		{
+			// To do the transformation, first rotate, second translate 
+			aux.x = obs.x * cos(p.theta) - obs.y * sin(p.theta) + p.x;
+			aux.y = obs.y * sin(p.theta) - obs.y * sin(p.theta) + p.y;
+			aux.id = obs.id;
+
+			transformed_obs.push_back(aux);
+		}
+
+		// Get all the landmarks within sensor_range distance from the particle (in map's coordinates)
+		vector<LandmarkObs> map_land_inrange;
+
+		for(auto map_land: map_landmarks.landmark_list)
+		{
+			if (dist(p.x, p.y, map_land.x, map_land.y) <= sensor_range)
+				obs_inrange.push_back(obs);
+		}
+
+		// Perform data association with them
+		dataAssociation(map_land_inrange, transformed_obs);
+
+		// Update particle weight using a multivariate gaussian taking into account all associated landmarks
+		double final_weight = 1;
+
+		for (auto tobs: transformed_obs)
+		{
+			// Find associated landmark from ID
+			for (auto land: map_landmarks.landmark_list)
+				if (tobs.id == land.id_i)
+				{
+					mu_x = land.x_f; // The mean of the Multivariate-Gaussian is the measurement's associated landmark positio
+					mu_y = land.y_f;
+
+					x = tobs.x; // The Multivariate-Gaussian is evaluated at the point of the transformed measurement's position
+					y = tobs.y;
+
+					final_weight *= normpdfbi(x, mu_x, std_x, y, mu_y, std_y) 
+				}
+		}
+
+		p.weight = final_weight;
+		weights.push_back(final_weight);
+	}
+
+	weights = normalize_vector(weights);	
 }
 
 void ParticleFilter::resample() 
@@ -140,6 +240,8 @@ void ParticleFilter::resample()
 	}
 
 	weights = weights2;
+
+	// TODO bug found: we are resampling the waits, not the particles proportional to their weights
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
@@ -189,4 +291,50 @@ string ParticleFilter::getSenseY(Particle best)
     string s = ss.str();
     s = s.substr(0, s.length()-1);  // get rid of the trailing space
     return s;
+}
+
+vector<double> normalize_vector(std::vector<double> inputVector)
+{
+	//declare sum:
+	double sum = 0.0f;
+
+	//declare and resize output vector:
+	vector<double> outputVector;
+	outputVector.resize(inputVector.size());
+
+	//estimate the sum:
+	for (unsigned int i = 0; i < inputVector.size(); ++i) 
+	{
+		sum += inputVector[i];
+	}
+
+	//normalize with sum:
+	for (unsigned int i = 0; i < inputVector.size(); ++i) 
+	{
+		outputVector[i] = inputVector[i]/sum ;
+	}
+
+	//return normalized vector:
+	return outputVector ;
+}
+
+inline double squared(double x)
+{
+	return x*x;
+}
+
+inline double normpdf(double x, double mu, double std) 
+{
+	double ONE_OVER_SQRT_2PI = 1/sqrt(2*M_PI) ;
+
+	return (ONE_OVER_SQRT_2PI/std)*exp(-0.5*squared((x-mu)/std));
+}
+
+inline double normpdfbi(double x, double mu_x, double std_x, \
+										double y, double mu_y, double std_y) 
+{
+	double ONE_OVER_SQRT_2PI = 1/sqrt(2*M_PI) ;
+
+	return (ONE_OVER_SQRT_2PI/(std_x*std_y)*exp(-0.5*\
+			(squared((x-mu_x)/std_x) + squared((y-mu_y)/std_y));
 }
