@@ -229,19 +229,17 @@ void ParticleFilter::resample()
     // std::default_random_engine generator; // The previous one was recommended in Udacity code, but I added this one here as a reference (easier to remember)
     discrete_distribution<int> distribution(weights);
 
-	vector<double> weights2;
+	vector<Particle> particles2;
 
 	int index;
 
 	for(int i=0; i<weights.size(); i++)
 	{
 		index = distribution(generator);
-		weights2.push_back(weights[index]);
+		particles2.push_back(particles[index]);
 	}
 
-	weights = weights2;
-
-	// TODO bug found: we are resampling the waits, not the particles proportional to their weights
+	particle = particles2;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
