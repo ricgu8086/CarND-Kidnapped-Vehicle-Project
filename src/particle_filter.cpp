@@ -63,16 +63,16 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 	normal_distribution<double> dist_y(y, std_y);
 	normal_distribution<double> dist_theta(theta, std_theta);
 
-	struct particle aux;
+	struct Particle particle_aux;
 
 	for(int i=0; i<num_particles; i++)
 	{
-		particle.x = dist_x(generator);
-		particle.y = dist_y(generator);
-		particle.theta = dist_theta(generator);
-		particle.weight = 1;
+		particle_aux.x = dist_x(generator);
+		particle_aux.y = dist_y(generator);
+		particle_aux.theta = dist_theta(generator);
+		particle_aux.weight = 1;
 
-		particles.push_back(particle); // It's added by copy, not by reference. It is OK
+		particles.push_back(particle_aux); // It's added by copy, not by reference. It is OK
 	}
 	
 	weights.resize(num_particles, 1);
@@ -98,8 +98,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 		if (fabs(yaw_rate) < 1e-6) // We can consider yaw_rate = 0
 		{
-			new_p.x = p.x + v * delta_t * cos(p.theta);
-			new_p.y = = p.y + v * delta_t * sin(p.theta);
+			new_p.x = p.x + velocity * delta_t * cos(p.theta);
+			new_p.y = p.y + velocity * delta_t * sin(p.theta);
 			new_p.theta = p.theta;
 		}
 		else
@@ -139,9 +139,6 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 				obs.id = land.id;
 		}
 	}
-
-
-	double dist(double x1, double y1, double x2, double y2)
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -158,9 +155,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 
-	double mu_x, mu_y, std_x, std_y;
+	double x, y, mu_x, mu_y, std_x, std_y;
 	vector<LandmarkObs> transformed_obs;
-	struct LandmarkObs aux;
+	struct LandmarkObs obs_aux;
 
 	weights.clear();
 
@@ -174,11 +171,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		for (auto&& obs: observations)
 		{
 			// To do the transformation, first rotate, second translate 
-			aux.x = obs.x * cos(p.theta) - obs.y * sin(p.theta) + p.x;
-			aux.y = obs.y * sin(p.theta) - obs.y * sin(p.theta) + p.y;
-			aux.id = obs.id;
+			obs_aux.x = obs.x * cos(p.theta) - obs.y * sin(p.theta) + p.x;
+			obs_aux.y = obs.y * sin(p.theta) - obs.y * sin(p.theta) + p.y;
+			obs_aux.id = obs.id;
 
-			transformed_obs.push_back(aux);
+			transformed_obs.push_back(obs_aux);
 		}
 
 		// Get all the landmarks within sensor_range distance from the particle (in map's coordinates)
@@ -186,8 +183,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 		for(auto map_land: map_landmarks.landmark_list)
 		{
-			if (dist(p.x, p.y, map_land.x, map_land.y) <= sensor_range)
-				obs_inrange.push_back(obs);
+			if (dist(p.x, p.y, map_land.x_f, map_land.y_f) <= sensor_range)
+			{
+				obs_aux.x = map_land.x_f;
+				obs_aux.y = map_land.y_f;
+				obs_aux.id = map_land.id_i;
+
+				map_land_inrange.push_back(obs_aux);
+			}
 		}
 
 		// Perform data association with them
@@ -208,7 +211,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					x = tobs.x; // The Multivariate-Gaussian is evaluated at the point of the transformed measurement's position
 					y = tobs.y;
 
-					final_weight *= normpdfbi(x, mu_x, std_x, y, mu_y, std_y) 
+					final_weight *= normpdfbi(x, mu_x, std_x, y, mu_y, std_y);
 				}
 		}
 
@@ -227,7 +230,7 @@ void ParticleFilter::resample()
 
 	mt19937 generator;
     // std::default_random_engine generator; // The previous one was recommended in Udacity code, but I added this one here as a reference (easier to remember)
-    discrete_distribution<int> distribution(weights);
+    discrete_distribution<> distribution(weights.begin(), weights.end());
 
 	vector<Particle> particles2;
 
@@ -239,7 +242,7 @@ void ParticleFilter::resample()
 		particles2.push_back(particles[index]);
 	}
 
-	particle = particles2;
+	particles = particles2;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
@@ -333,6 +336,6 @@ inline double normpdfbi(double x, double mu_x, double std_x, \
 {
 	double ONE_OVER_SQRT_2PI = 1/sqrt(2*M_PI) ;
 
-	return (ONE_OVER_SQRT_2PI/(std_x*std_y)*exp(-0.5*\
-			(squared((x-mu_x)/std_x) + squared((y-mu_y)/std_y));
+	return (ONE_OVER_SQRT_2PI/(std_x*std_y))*exp(-0.5*\
+			(squared((x-mu_x)/std_x) + squared((y-mu_y)/std_y)));
 }
