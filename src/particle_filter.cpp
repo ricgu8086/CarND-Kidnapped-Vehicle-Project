@@ -207,11 +207,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		for (auto tobs: transformed_obs)
 		{
 			// Find associated landmark from ID
-			for (auto land: map_landmarks.landmark_list)
-				if (tobs.id == land.id_i)
+			for (auto land: map_land_inrange)
+				if (tobs.id == land.id)
 				{
-					mu_x = land.x_f; // The mean of the Multivariate-Gaussian is the measurement's associated landmark positio
-					mu_y = land.y_f;
+					mu_x = land.x; // The mean of the Multivariate-Gaussian is the measurement's associated landmark positio
+					mu_y = land.y;
 
 					x = tobs.x; // The Multivariate-Gaussian is evaluated at the point of the transformed measurement's position
 					y = tobs.y;
