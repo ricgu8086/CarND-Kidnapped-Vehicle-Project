@@ -204,6 +204,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		// Update particle weight using a multivariate gaussian taking into account all associated landmarks
 		double final_weight = 1;
 
+		vector<int> associations;
+		vector<double> sense_x, sense_y;
+
 		for (auto tobs: transformed_obs)
 		{
 			// Find associated landmark from ID
@@ -217,11 +220,18 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					y = tobs.y;
 
 					final_weight *= normpdfbi(x, mu_x, std_x, y, mu_y, std_y);
+
+					// For extra information within the simulator
+					associations.push_back(tobs.id);
+					sense_x.push_back(x);
+					sense_y.push_back(y);
 				}
 		}
 
 		p.weight = final_weight;
 		weights.push_back(final_weight);
+
+		SetAssociations(p, associations, sense_x, sense_y);
 	}
 
 	weights = normalize_vector(weights);	
