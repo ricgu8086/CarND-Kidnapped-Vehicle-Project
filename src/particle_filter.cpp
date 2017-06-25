@@ -159,7 +159,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   http://planning.cs.uiuc.edu/node99.html
 
 	double x, y, mu_x, mu_y, std_x, std_y;
-	vector<LandmarkObs> transformed_obs;
 	struct LandmarkObs obs_aux;
 
 	weights.clear();
@@ -173,6 +172,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	for (auto&& p: particles)
 	{
 		// Transform all observations from vehicle's coordinates to map's coordinates
+		vector<LandmarkObs> transformed_obs;
+
 		for (auto&& obs: observations)
 		{
 			// To do the transformation, first rotate, second translate 
