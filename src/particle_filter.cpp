@@ -177,7 +177,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		{
 			// To do the transformation, first rotate, second translate 
 			obs_aux.x = obs.x * cos(p.theta) - obs.y * sin(p.theta) + p.x;
-			obs_aux.y = obs.y * sin(p.theta) - obs.y * sin(p.theta) + p.y;
+			obs_aux.y = obs.x * sin(p.theta) + obs.y * cos(p.theta) + p.y;
 			obs_aux.id = obs.id;
 
 			transformed_obs.push_back(obs_aux);
